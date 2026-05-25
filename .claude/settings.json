@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -rn \"chapter.*3\\\\|chapterNo.*3\\\\|_3\\\\b\\\\|chapter_no.*3\\\\|173_3\\\\|chNo.*3\\\\b\\\\|== 3\\\\|== '3'\" /Users/jihad/Desktop/question_api/ /Users/jihad/AndroidStudioProjects/square_marker_detector/lib/screens/question_editor/ 2>/dev/null | grep -v \".dart.bak\\\\|/.git/\")",
+      "Read(//Users/jihad/AndroidStudioProjects/square_marker_detector/lib/screens/question_editor/**)"
+    ]
+  }
+}
