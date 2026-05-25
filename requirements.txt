@@ -1,5 +1,18 @@
+# fastapi==0.111.0
+# uvicorn[standard]==0.30.1
+# motor==3.4.0
+# python-dotenv==1.0.1
+# pydantic==2.7.1
+
+
+# pymongo
+# dnspython
+
+
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
 motor==3.4.0
 python-dotenv==1.0.1
 pydantic==2.7.1
+pymongo
+dnspython
