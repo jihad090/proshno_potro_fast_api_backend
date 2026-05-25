@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: proshno-potro-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        value: proshno-potro
+      - key: COLLECTION_NAME
+        value: mcq
