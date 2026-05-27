@@ -293,7 +293,7 @@ body {
 
 .omr-section img { display: block; width: 100%; height: auto; }
 
-.inst-name { font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 5px; }
+.inst-name { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 5px; }
 table.ht { width: 100%; font-size: 10px; border-collapse: collapse; }
 table.ht td { padding: 1px 0; }
 
@@ -547,10 +547,10 @@ async function main() {
   var P1_COL_H    = colH('page1Col1');
   var P2_COL_H    = colH('page2Col1');
   var MEAS_W      = colInnerW('page1Col1');
-  var totalBudget = P1_COL_H * 3 + P2_COL_H * 3;
 
-  var fontSize = 12, padBottom = 0, qImgH = 40, optImgH = 20;
-  var MIN_FONT = 3,  MIN_PAD   = 0, MIN_QIMG = 20, MIN_OPTIMG = 10;
+  var MAX_FONT = 12, MIN_FONT = 7;
+  var fontSize = MAX_FONT, padBottom = 0, qImgH = 40, optImgH = 20;
+  var MIN_PAD = 0, MIN_QIMG = 20, MIN_OPTIMG = 10;
   var LABELS   = ['a','b','c','d'];
   var testDiv  = document.getElementById('test');
   testDiv.style.width = MEAS_W + 'px';
@@ -684,10 +684,39 @@ async function main() {
 
   setStatus('সাইজ নির্ধারণ হচ্ছে...');
 
-  await buildContent();
-  var totalH = await measureBlocks();
+  // Six fixed columns: 3 on page 1 (shorter — shares space with the header),
+  // 3 on page 2. Blocks are never split, so pack by reading order: fill a
+  // column top-to-bottom, then move on to the next.
+  var COL_IDS  = ['page1Col1','page1Col2','page1Col3','page2Col1','page2Col2','page2Col3'];
+  var COL_CAPS = [P1_COL_H, P1_COL_H, P1_COL_H, P2_COL_H, P2_COL_H, P2_COL_H];
 
-  while (totalH > totalBudget) {
+  function packBlocks(heights) {
+    // First-fit in order. Advance to the next column when the current one can't
+    // hold the next block. Anything past the last column piles into it (visible
+    // overflow) and sets ok=false so the caller knows to shrink first.
+    var assignment = [];
+    var col = 0, used = 0, ok = true;
+    for (var i = 0; i < heights.length; i++) {
+      var h = heights[i];
+      if (used > 0 && used + h > COL_CAPS[col]) {
+        if (col < COL_CAPS.length - 1) { col++; used = 0; }
+        else { ok = false; }
+      }
+      assignment.push(col);
+      used += h;
+    }
+    return { ok: ok, assignment: assignment };
+  }
+
+  // Pick the largest font in [MIN_FONT, MAX_FONT] at which every question packs
+  // into the 6 columns. If even MIN_FONT overflows, trim padding then images as
+  // a last resort, then accept the best effort.
+  var pack = null;
+  while (true) {
+    await buildContent();
+    await measureBlocks();
+    pack = packBlocks(blockHeights);
+    if (pack.ok) break;
     if (fontSize > MIN_FONT) {
       fontSize--;
     } else if (padBottom > MIN_PAD) {
@@ -698,50 +727,27 @@ async function main() {
     } else {
       break;
     }
-    await buildContent();
-    totalH = await measureBlocks();
   }
 
   if (optMeasEl.parentNode) document.body.removeChild(optMeasEl);
 
   setStatus('কলামে ভাগ করা হচ্ছে...');
 
-  var portion = [
-    { idName:'page1Col1', size:P1_COL_H, state:true, content:[] },
-    { idName:'page1Col2', size:P1_COL_H, state:true, content:[] },
-    { idName:'page1Col3', size:P1_COL_H, state:true, content:[] },
-    { idName:'page2Col1', size:P2_COL_H, state:true, content:[] },
-    { idName:'page2Col2', size:P2_COL_H, state:true, content:[] },
-    { idName:'page2Col3', size:P2_COL_H, state:true, content:[] },
-  ];
-
-  var lastPortion = portion[portion.length - 1];
+  var colContent = [[],[],[],[],[],[]];
   for (var idx = 0; idx < blockRendered.length; idx++) {
-    var itemH  = blockHeights[idx];
-    var placed = false;
-    for (var pi = 0; pi < portion.length; pi++) {
-      if (portion[pi].size >= itemH && portion[pi].state) {
-        portion[pi].content.push(blockRendered[idx]);
-        portion[pi].size -= itemH;
-        if (pi > 0) portion[pi - 1].state = false;
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      lastPortion.content.push(blockRendered[idx]);
-      lastPortion.size -= itemH;
-    }
+    var c = pack.assignment[idx];
+    if (c === undefined || c >= COL_IDS.length) c = COL_IDS.length - 1;
+    colContent[c].push(blockRendered[idx]);
   }
   if (measDiv.parentNode) document.body.removeChild(measDiv);
 
-  portion.forEach(function(p) {
-    var el = document.getElementById(p.idName);
+  for (var ci = 0; ci < COL_IDS.length; ci++) {
+    var el = document.getElementById(COL_IDS[ci]);
     if (el) {
       el.style.fontSize = fontSize + 'px';
-      el.innerHTML = p.content.join('');
+      el.innerHTML = colContent[ci].join('');
     }
-  });
+  }
 
   applyMeta();
   scaleToFit();
