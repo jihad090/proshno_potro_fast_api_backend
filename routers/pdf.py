@@ -157,6 +157,9 @@ _HTML = r"""<!DOCTYPE html>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>
 <title>Question Paper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;700&family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
 <script>
 window.MathJax = {
   tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
@@ -173,7 +176,7 @@ html {
 }
 
 body {
-  font-family: 'Times New Roman', 'Noto Serif Bengali', serif;
+  font-family: 'Tinos', 'Noto Serif Bengali', serif;
   background: #525659;
   display: flex;
   flex-direction: column;
@@ -300,7 +303,7 @@ table.ht td { padding: 1px 0; }
   left: 0;
   width: __COL_W__px;
   visibility: hidden;
-  font-family: 'Times New Roman', 'Noto Serif Bengali', serif;
+  font-family: 'Tinos', 'Noto Serif Bengali', serif;
   overflow: visible;
 }
 
@@ -428,7 +431,7 @@ const meta    = __META_JSON__;
 var _fallback = setTimeout(function () {
   document.getElementById('pgOverlay').style.display = 'none';
   window.__pdfReady = true;
-}, 30000);
+}, 50000);
 
 function setStatus(s) {
   var el = document.getElementById('pgStatus');
@@ -475,11 +478,31 @@ function applyMeta() {
   if (sc) sc.textContent = meta.subjectCode;
 }
 
+async function waitForMathJax(timeoutMs) {
+  var start = Date.now();
+  while (!(window.MathJax && window.MathJax.typesetPromise)) {
+    if (Date.now() - start > timeoutMs) return;
+    await new Promise(function (r) { setTimeout(r, 100); });
+  }
+  try {
+    if (window.MathJax.startup && window.MathJax.startup.promise) {
+      await window.MathJax.startup.promise;
+    }
+  } catch (e) {}
+}
+
 async function main() {
   applyMeta();
   setStatus('প্রশ্ন তৈরি হচ্ছে...');
 
   await new Promise(function(r) { setTimeout(r, 100); });
+
+  // Web fonts (Bengali + Tinos) must be ready before measuring, otherwise the
+  // columns are packed against fallback-font metrics and overflow once the real
+  // fonts swap in. The server's Chromium has no system Bengali font.
+  try { await document.fonts.ready; } catch (e) {}
+  // MathJax loads async from the CDN — wait for it so math typesets in the PDF.
+  await waitForMathJax(15000);
 
   async function waitImages(root) {
     var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
@@ -538,13 +561,13 @@ async function main() {
   var optMeasEl = document.createElement('div');
   optMeasEl.style.cssText = 'position:fixed;top:-9999px;left:0;overflow:visible;'
     + 'visibility:hidden;white-space:nowrap;'
-    + 'font-family:Times New Roman,Noto Serif Bengali,serif;';
+    + 'font-family:Tinos,Noto Serif Bengali,serif;';
   document.body.appendChild(optMeasEl);
 
   var measDiv = document.createElement('div');
   measDiv.style.cssText = 'position:fixed;top:-9999px;left:0;overflow:visible;'
     + 'width:' + MEAS_W + 'px;visibility:hidden;text-align:justify;'
-    + 'font-family:Times New Roman,Noto Serif Bengali,serif;';
+    + 'font-family:Tinos,Noto Serif Bengali,serif;';
   document.body.appendChild(measDiv);
 
   async function measureTextW(text) {
@@ -728,13 +751,7 @@ async function main() {
   window.__pdfReady = true;
 }
 
-if (window.MathJax && window.MathJax.startup) {
-  window.MathJax.startup.promise.then(main).catch(function() {
-    setTimeout(main, 1000);
-  });
-} else {
-  setTimeout(main, 500);
-}
+main();
 </script>
 </body>
 </html>"""

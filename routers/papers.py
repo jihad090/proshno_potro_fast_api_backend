@@ -70,6 +70,8 @@ class UpdatePaperRequest(BaseModel):
     duration:         Optional[int] = None
     subject:          Optional[str] = None  # human label e.g. "Physics"
     class_label:      Optional[str] = None  # display label e.g. "Nine"
+    exam_name:        Optional[str] = None  # e.g. "অর্ধবার্ষিক পরীক্ষা"
+    exam_date:        Optional[str] = None  # e.g. "27/05/2026"
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -134,6 +136,10 @@ async def update_paper(paper_id: str, req: UpdatePaperRequest):
         set_payload["subject"] = req.subject
     if req.class_label is not None:
         set_payload["class_label"] = req.class_label
+    if req.exam_name is not None:
+        set_payload["exam_name"] = req.exam_name
+    if req.exam_date is not None:
+        set_payload["exam_date"] = req.exam_date
 
     await db[COLLECTION].update_one(
         {"paper_id": paper_id},

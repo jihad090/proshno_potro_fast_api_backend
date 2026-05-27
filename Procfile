@@ -1,1 +1,1 @@
-web: uvicorn main:app --host 0.0.0.0 --port $PORT
+web: export PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/src/.playwright-browsers; playwright install chromium-headless-shell && uvicorn main:app --host 0.0.0.0 --port $PORT
