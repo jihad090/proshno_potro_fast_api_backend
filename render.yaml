@@ -2,7 +2,7 @@ services:
   - type: web
     name: proshno-potro-api
     runtime: python
-    buildCommand: pip install -r requirements.txt && python -m playwright install --with-deps chromium
+    buildCommand: pip install -r requirements.txt && PLAYWRIGHT_BROWSERS_PATH=0 playwright install --with-deps chromium
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MONGO_URI
@@ -11,3 +11,5 @@ services:
         value: proshno-potro
       - key: COLLECTION_NAME
         value: mcq
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: "0"
