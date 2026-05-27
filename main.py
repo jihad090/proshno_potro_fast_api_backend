@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routers import questions, papers
+from routers import questions, papers, pdf
 from database import connect_db, close_db
 
 @asynccontextmanager
@@ -31,6 +31,7 @@ app.add_middleware(
 
 app.include_router(questions.router, prefix="/api/questions", tags=["Questions"])
 app.include_router(papers.router,    prefix="/api/papers",    tags=["Papers"])
+app.include_router(pdf.router,       prefix="/api/pdf",       tags=["PDF"])
 
 @app.get("/")
 async def root():

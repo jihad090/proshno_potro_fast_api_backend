@@ -179,3 +179,57 @@ async def get_paper(paper_id: str):
 
     doc["created_at"] = doc["created_at"].isoformat()
     return doc
+
+
+# ── Evaluate ──────────────────────────────────────────────────────────────────
+
+class EvaluatePaperRequest(BaseModel):
+    scanned_by:          str
+    qr_value:            str
+    roll:                str
+    reg:                 str
+    ans_bubble_sequence: List[int]
+    correct:             int
+    incorrect:           int
+    skipped:             int
+
+
+@router.post("/{paper_id}/evaluate")
+async def evaluate_paper(paper_id: str, req: EvaluatePaperRequest):
+    """
+    Append one scan entry and update correct/incorrect/skipped counts.
+    Maximum 4 evaluations per paper.
+    """
+    db  = get_db()
+    doc = await db[COLLECTION].find_one({"paper_id": paper_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Paper {paper_id} not found")
+
+    scan_count = len(doc.get("scan_info_list", []))
+    if scan_count >= 4:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum 4 evaluations allowed per paper",
+        )
+
+    scan_info = {
+        "scanned_at":        datetime.now(timezone.utc).isoformat(),
+        "scanned_by":        req.scanned_by,
+        "qr_value":          req.qr_value,
+        "roll":              req.roll,
+        "reg":               req.reg,
+        "ans_bubble_sequence": req.ans_bubble_sequence,
+    }
+
+    await db[COLLECTION].update_one(
+        {"paper_id": paper_id},
+        {
+            "$push": {"scan_info_list": scan_info},
+            "$set": {
+                "correct":   req.correct,
+                "incorrect": req.incorrect,
+                "skipped":   req.skipped,
+            },
+        },
+    )
+    return {"message": "Evaluation saved", "paper_id": paper_id}
