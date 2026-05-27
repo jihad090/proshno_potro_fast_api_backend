@@ -214,7 +214,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  padding: 6px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -524,8 +524,7 @@ async function main() {
     if (omrH > 0) {
       instrImg.style.width       = 'auto';
       instrImg.style.maxWidth    = '100%';
-      instrImg.style.height      = 'auto';
-      instrImg.style.maxHeight   = omrH + 'px';
+      instrImg.style.height      = omrH + 'px';
       instrImg.style.marginLeft  = 'auto';
       instrImg.style.marginRight = 'auto';
     }
@@ -548,7 +547,7 @@ async function main() {
   var P2_COL_H    = colH('page2Col1');
   var MEAS_W      = colInnerW('page1Col1');
 
-  var MAX_FONT = 12, MIN_FONT = 7;
+  var MAX_FONT = 13, MIN_FONT = 8;
   var fontSize = MAX_FONT, padBottom = 0, qImgH = 40, optImgH = 20;
   var MIN_PAD = 0, MIN_QIMG = 20, MIN_OPTIMG = 10;
   var LABELS   = ['a','b','c','d'];
