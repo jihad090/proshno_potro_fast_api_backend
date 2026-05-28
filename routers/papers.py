@@ -187,6 +187,16 @@ async def get_paper(paper_id: str):
     return doc
 
 
+@router.delete("/{paper_id}", status_code=200)
+async def delete_paper(paper_id: str):
+    """Delete a paper permanently by its paper_id."""
+    db     = get_db()
+    result = await db[COLLECTION].delete_one({"paper_id": paper_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"Paper {paper_id} not found")
+    return {"message": "Paper deleted", "paper_id": paper_id}
+
+
 # ── Evaluate ──────────────────────────────────────────────────────────────────
 
 class EvaluatePaperRequest(BaseModel):
