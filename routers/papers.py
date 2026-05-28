@@ -208,6 +208,7 @@ class EvaluatePaperRequest(BaseModel):
     correct:             int
     incorrect:           int
     skipped:             int
+    omr_image_local:     Optional[str] = None   # filename on the user's device
 
 
 @router.post("/{paper_id}/evaluate")
@@ -215,6 +216,9 @@ async def evaluate_paper(paper_id: str, req: EvaluatePaperRequest):
     """
     Append one scan entry and update correct/incorrect/skipped counts.
     Maximum 4 evaluations per paper.
+
+    omr_image_local — only the filename (e.g. "<paper_id>.png"). The device
+    reconstructs the full path; storing only the filename keeps it portable.
     """
     db  = get_db()
     doc = await db[COLLECTION].find_one({"paper_id": paper_id})
@@ -237,15 +241,19 @@ async def evaluate_paper(paper_id: str, req: EvaluatePaperRequest):
         "ans_bubble_sequence": req.ans_bubble_sequence,
     }
 
+    set_payload: dict = {
+        "correct":   req.correct,
+        "incorrect": req.incorrect,
+        "skipped":   req.skipped,
+    }
+    if req.omr_image_local is not None:
+        set_payload["omr_image_local"] = req.omr_image_local
+
     await db[COLLECTION].update_one(
         {"paper_id": paper_id},
         {
             "$push": {"scan_info_list": scan_info},
-            "$set": {
-                "correct":   req.correct,
-                "incorrect": req.incorrect,
-                "skipped":   req.skipped,
-            },
+            "$set":  set_payload,
         },
     )
     return {"message": "Evaluation saved", "paper_id": paper_id}
