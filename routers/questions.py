@@ -105,7 +105,19 @@ async def get_meta(
         ]
         rows  = await db[COLLECTION].aggregate(pipeline).to_list(length=10)
         total = sum(r["count"] for r in rows)
-        return {"total": total, "difficulty": {r["_id"]: r["count"] for r in rows}}
+
+        # Most recent updatedAt for this code — null if field absent
+        latest = await db[COLLECTION].find(
+            {"code": code, "updatedAt": {"$exists": True}},
+            {"updatedAt": 1, "_id": 0},
+        ).sort("updatedAt", -1).limit(1).to_list(length=1)
+        update_date = latest[0]["updatedAt"].isoformat() if latest else None
+
+        return {
+            "total":       total,
+            "difficulty":  {r["_id"]: r["count"] for r in rows},
+            "update_date": update_date,
+        }
 
     bn = await breakdown(bn_code)
     en = await breakdown(en_code)
