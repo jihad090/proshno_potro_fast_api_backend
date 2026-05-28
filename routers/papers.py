@@ -233,12 +233,17 @@ async def evaluate_paper(paper_id: str, req: EvaluatePaperRequest):
         )
 
     scan_info = {
-        "scanned_at":        datetime.now(timezone.utc).isoformat(),
-        "scanned_by":        req.scanned_by,
-        "qr_value":          req.qr_value,
-        "roll":              req.roll,
-        "reg":               req.reg,
+        "scanned_at":          datetime.now(timezone.utc).isoformat(),
+        "scanned_by":          req.scanned_by,
+        "qr_value":            req.qr_value,
+        "roll":                req.roll,
+        "reg":                 req.reg,
         "ans_bubble_sequence": req.ans_bubble_sequence,
+        # Per-scan totals so history shows each attempt independently;
+        # the top-level correct/incorrect/skipped fields mirror the LATEST scan.
+        "correct":             req.correct,
+        "incorrect":           req.incorrect,
+        "skipped":             req.skipped,
     }
 
     set_payload: dict = {
