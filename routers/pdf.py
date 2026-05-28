@@ -166,7 +166,7 @@ window.MathJax = {
   options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
 };
 </script>
-<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-svg.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -205,7 +205,7 @@ body {
 .page-inner::before {
   content: '';
   display: block;
-  padding-top: __PAD_PCT__%%;
+  padding-top: __PAD_PCT__%;
 }
 
 .page {
@@ -214,7 +214,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  padding: 10px;
+  padding: 23px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -231,10 +231,16 @@ body {
   box-sizing: border-box;
 }
 
-.header-left { flex: 1; min-width: 0; }
+.header-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 
 .inst-name {
-  font-size: 14px;
+  font-size: 22px;
   font-weight: bold;
   text-align: center;
   margin-bottom: 6px;
@@ -244,16 +250,16 @@ body {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .ht td { width: 33.33%; padding: 2px 4px; vertical-align: top; }
 
-.note { font-size: 8px; padding-top: 0px; }
+.note { font-size: 12px; padding-top: 0px; }
 
 .qr-box {
-  width: 45px;
-  height: 45px;
+  width: 90px;
+  height: 90px;
   aspect-ratio: 1;
   border: 1px solid #000;
   padding: 2px;
@@ -276,7 +282,7 @@ body {
 
 .column {
   flex: 1;
-  padding: 0px 2px 0px 3px;
+  padding: 8px 4px 8px 5px;
   overflow: hidden;
   border-right: 1px solid #ddd;
   text-align: justify;
@@ -287,14 +293,12 @@ body {
 .omr-section {
   flex-shrink: 0;
   border-top: 1px dashed #000;
-  padding-top: 4px;
+  padding-top: 19px;
   overflow: hidden;
 }
 
 .omr-section img { display: block; width: 100%; height: auto; }
 
-.inst-name { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 5px; }
-table.ht { width: 100%; font-size: 10px; border-collapse: collapse; }
 table.ht td { padding: 1px 0; }
 
 #test {
@@ -340,13 +344,26 @@ table.ht td { padding: 1px 0; }
 
 @page { margin: 0; }
 @media print {
-  body { background: white; padding: 0; gap: 0; }
-  #pgOverlay { display: none !important; }
-  .page-wrapper { page-break-after: always; height: auto !important; width: auto !important; overflow: visible !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body {
+    background: white !important;
+    margin: 0 !important; padding: 0 !important; gap: 0 !important;
+    display: block !important;
+  }
+  #pgOverlay, #test { display: none !important; }
+  .page-wrapper {
+    page-break-after: always;
+    display: block !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    margin: 0 !important; padding: 0 !important;
+  }
   .page-wrapper:last-child { page-break-after: auto; }
-  .page-inner { box-shadow: none; width: 100%; max-width: 100%; transform: none !important; }
-  .page-inner::before { display: none; }
-  .page { position: static; height: auto; }
+  .page-inner {
+    box-shadow: none !important;
+    width: 100% !important; max-width: 100% !important;
+    transform: none !important;
+  }
 }
 </style>
 </head>
@@ -547,9 +564,13 @@ async function main() {
   var P2_COL_H    = colH('page2Col1');
   var MEAS_W      = colInnerW('page1Col1');
 
-  var MAX_FONT = 13, MIN_FONT = 8;
-  var fontSize = MAX_FONT, padBottom = 0, qImgH = 40, optImgH = 20;
-  var MIN_PAD = 0, MIN_QIMG = 20, MIN_OPTIMG = 10;
+  // Auto-fit levers — start at the most generous values; shrink in order
+  // (font → lineHeight → padBottom → images) until everything packs into 6 cols.
+  var MAX_FONT = 15, MIN_FONT = 8;
+  var MAX_LINE = 1.4, MIN_LINE = 1.0;
+  var fontSize = MAX_FONT, lineHeight = MAX_LINE;
+  var padBottom = 5, qImgH = 110, optImgH = 70;
+  var MIN_PAD = 0, MIN_QIMG = 40, MIN_OPTIMG = 30;
   var LABELS   = ['a','b','c','d'];
   var testDiv  = document.getElementById('test');
   testDiv.style.width = MEAS_W + 'px';
@@ -596,7 +617,7 @@ async function main() {
         var prefix = (pi === 0) ? '<b>' + qNum + '. </b>' : '';
         var pHtml  = '';
         if (prt.text || pi === 0)
-          pHtml += '<div style="font-size:inherit;line-height:1.00;">' + prefix + escHtml(prt.text || '') + '</div>';
+          pHtml += '<div style="font-size:inherit;line-height:' + lineHeight + ';">' + prefix + escHtml(prt.text || '') + '</div>';
         if (prt.imgSrc)
           pHtml += '<div style="text-align:center;"><img src="' + prt.imgSrc
             + '" style="max-height:' + qImgH + 'px;max-width:100%;height:auto;object-fit:contain;"></div>';
@@ -608,25 +629,31 @@ async function main() {
       var hasImg   = optImgs.some(function(s) { return !!s; });
 
       var optBody = function(i) {
-        var s = '<div style="display:flex;align-items:center;gap:2px;line-height:1.00;">'
+        var s = '<div style="display:flex;align-items:center;gap:2px;line-height:' + lineHeight + ';">'
           + '<b style="white-space:nowrap;flex-shrink:0;">' + LABELS[i] + ')&nbsp;</b>';
         if (optTexts[i]) s += '<span>' + escHtml(optTexts[i]) + '</span>';
         if (optImgs[i]) s += '<img src="' + optImgs[i]
-          + '" style="flex-shrink:0;max-height:' + Math.round(optImgH * 0.7) + 'px;'
+          + '" style="flex-shrink:0;max-height:' + optImgH + 'px;'
           + 'width:auto;height:auto;object-fit:contain;">';
         s += '</div>';
         return s;
       };
 
       if (hasImg) {
-        blocks.push('<div style="display:flex;padding-left:3px;line-height:1.00;">'
-          + '<div style="width:50%;padding-right:4px;">' + optBody(0) + '</div>'
-          + '<div style="width:50%;">' + optBody(1) + '</div>'
-          + '</div>');
-        blocks.push('<div style="display:flex;padding-left:3px;padding-bottom:' + padBottom + 'px;line-height:1.00;">'
-          + '<div style="width:50%;padding-right:4px;">' + optBody(2) + '</div>'
-          + '<div style="width:50%;">' + optBody(3) + '</div>'
-          + '</div>');
+        // Image options: 2 rows (a/b, c/d) kept together as ONE block so the
+        // column packer won't split them between columns.
+        blocks.push(
+          '<div style="padding-bottom:' + padBottom + 'px;">'
+          + '<div style="display:flex;padding-left:3px;line-height:' + lineHeight + ';">'
+          +   '<div style="width:50%;padding-right:4px;">' + optBody(0) + '</div>'
+          +   '<div style="width:50%;">' + optBody(1) + '</div>'
+          + '</div>'
+          + '<div style="display:flex;padding-left:3px;line-height:' + lineHeight + ';">'
+          +   '<div style="width:50%;padding-right:4px;">' + optBody(2) + '</div>'
+          +   '<div style="width:50%;">' + optBody(3) + '</div>'
+          + '</div>'
+          + '</div>'
+        );
       } else {
         var maxW = 0;
         for (var oi = 0; oi < 4; oi++) {
@@ -635,25 +662,30 @@ async function main() {
         }
         maxW += 4;
         if (maxW <= cellWidth(4)) {
-          blocks.push('<div style="display:flex;gap:4px;padding-left:3px;padding-bottom:' + padBottom + 'px;line-height:1.00;">'
+          blocks.push('<div style="display:flex;gap:4px;padding-left:3px;padding-bottom:' + padBottom + 'px;line-height:' + lineHeight + ';">'
             + '<div style="flex:1;min-width:0;">' + optBody(0) + '</div>'
             + '<div style="flex:1;min-width:0;">' + optBody(1) + '</div>'
             + '<div style="flex:1;min-width:0;">' + optBody(2) + '</div>'
             + '<div style="flex:1;min-width:0;">' + optBody(3) + '</div>'
             + '</div>');
         } else if (maxW <= cellWidth(2)) {
-          blocks.push('<div style="display:flex;gap:4px;padding-left:3px;line-height:1.00;">'
-            + '<div style="flex:1;min-width:0;">' + optBody(0) + '</div>'
-            + '<div style="flex:1;min-width:0;">' + optBody(1) + '</div>'
-            + '</div>');
-          blocks.push('<div style="display:flex;gap:4px;padding-left:3px;padding-bottom:' + padBottom + 'px;line-height:1.00;">'
-            + '<div style="flex:1;min-width:0;">' + optBody(2) + '</div>'
-            + '<div style="flex:1;min-width:0;">' + optBody(3) + '</div>'
-            + '</div>');
+          // 2-col: 2 rows kept together as ONE block (same reason as images).
+          blocks.push(
+            '<div style="padding-bottom:' + padBottom + 'px;">'
+            + '<div style="display:flex;gap:4px;padding-left:3px;line-height:' + lineHeight + ';">'
+            +   '<div style="flex:1;min-width:0;">' + optBody(0) + '</div>'
+            +   '<div style="flex:1;min-width:0;">' + optBody(1) + '</div>'
+            + '</div>'
+            + '<div style="display:flex;gap:4px;padding-left:3px;line-height:' + lineHeight + ';">'
+            +   '<div style="flex:1;min-width:0;">' + optBody(2) + '</div>'
+            +   '<div style="flex:1;min-width:0;">' + optBody(3) + '</div>'
+            + '</div>'
+            + '</div>'
+          );
         } else {
           for (var i = 0; i < 4; i++) {
             var pb = (i === 3) ? 'padding-bottom:' + padBottom + 'px;' : '';
-            blocks.push('<div style="padding-left:3px;' + pb + 'line-height:1.00;">' + optBody(i) + '</div>');
+            blocks.push('<div style="padding-left:3px;' + pb + 'line-height:' + lineHeight + ';">' + optBody(i) + '</div>');
           }
         }
       }
@@ -718,6 +750,8 @@ async function main() {
     if (pack.ok) break;
     if (fontSize > MIN_FONT) {
       fontSize--;
+    } else if (lineHeight > MIN_LINE) {
+      lineHeight = Math.max(MIN_LINE, +(lineHeight - 0.1).toFixed(1));
     } else if (padBottom > MIN_PAD) {
       padBottom = Math.max(MIN_PAD, padBottom - 2);
     } else if (qImgH > MIN_QIMG || optImgH > MIN_OPTIMG) {
