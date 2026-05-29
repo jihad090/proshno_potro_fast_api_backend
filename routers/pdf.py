@@ -108,8 +108,8 @@ async def _fetch_questions_for_paper(db, subject_codes: dict) -> list[dict]:
     return questions
 
 
-async def _build_img_map(questions: list[dict], qr_url: str) -> dict[str, str]:
-    urls: set[str] = {qr_url}
+async def _build_img_map(questions: list[dict], *qr_urls: str) -> dict[str, str]:
+    urls: set[str] = set(qr_urls)
     for q in questions:
         for p in q["parts_raw"]:
             if p.get("imageLink"):
@@ -167,7 +167,6 @@ window.MathJax = {
 };
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-svg.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -485,7 +484,7 @@ table.ht td { padding: 1px 0; }
             transform: rotate(90deg);
             transform-origin: top right;
           ">
-            <img id="paperQRImg" alt="Paper ID QR" style="display: block; width: 100%; height: 100%; object-fit: contain;"/>
+            <img id="paperQRImg" src="__PAPER_QR_SRC__" alt="Paper ID QR" style="display: block; width: 100%; height: 100%; object-fit: contain;"/>
           </div>
         </div>
       </div>
@@ -553,7 +552,7 @@ function scaleToFit() {
   }
 }
 
-async function applyMeta() {
+function applyMeta() {
   document.getElementById('iname').textContent = meta.institutionName;
   [['en1','en2',meta.examName],['sb1','sb2',meta.subject],['cl1','cl2',meta.className],
    ['tm1','tm2',meta.totalMark],['tt1','tt2',meta.totalTime]].forEach(function(p) {
@@ -588,22 +587,6 @@ async function applyMeta() {
       + cell('বিষয়ঃ',     meta.subject)
       + cell('সময়ঃ',      meta.totalTime);
   }
-
-  // OMR overlay: paper-ID QR code (encodes meta.paperID only).
-  if (window.QRCode && meta.paperID) {
-    try {
-      var qrDataURL = await window.QRCode.toDataURL(String(meta.paperID), {
-        width:                240,
-        margin:               1,
-        errorCorrectionLevel: 'M',
-        color: { dark: '#000000', light: '#ffffff' }
-      });
-      var qrImg = document.getElementById('paperQRImg');
-      if (qrImg) qrImg.src = qrDataURL;
-    } catch (e) {
-      console.warn('paper QR generation failed', e);
-    }
-  }
 }
 
 async function waitForMathJax(timeoutMs) {
@@ -620,7 +603,7 @@ async function waitForMathJax(timeoutMs) {
 }
 
 async function main() {
-  await applyMeta();
+  applyMeta();
   setStatus('প্রশ্ন তৈরি হচ্ছে...');
 
   await new Promise(function(r) { setTimeout(r, 100); });
@@ -893,10 +876,7 @@ async function main() {
     }
   }
 
-  await applyMeta();
-  // Ensure the freshly-generated paper QR is loaded before signaling ready,
-  // so Playwright captures it in the PDF.
-  await waitImages(document.body);
+  applyMeta();
   scaleToFit();
 
   clearTimeout(_fallback);
@@ -916,6 +896,7 @@ def _build_html(
     omr_b64: str,
     instr_b64: str,
     qr_src: str,
+    paper_qr_src: str,
     is_legal: bool,
 ) -> str:
     page_w  = 816 if is_legal else 794
@@ -930,6 +911,7 @@ def _build_html(
         .replace("__PAD_PCT__",       pad_pct)
         .replace("__COL_W__",         str(col_w))
         .replace("__QR_SRC__",        qr_src)
+        .replace("__PAPER_QR_SRC__",  paper_qr_src)
         .replace("__OMR_B64__",       omr_b64)
         .replace("__INSTR_B64__",     instr_b64)
         .replace("__QUESTIONS_JSON__", questions_json)
@@ -981,9 +963,12 @@ async def get_pdf(
         raise HTTPException(400, "No questions found for this paper")
 
     # Fetch all remote images concurrently
-    qr_url  = f"{QR_BASE}{paper_id}"
-    img_map = await _build_img_map(questions, qr_url)
-    qr_src  = img_map.get(qr_url, qr_url)
+    qr_url       = f"{QR_BASE}{paper_id}"
+    # Paper-ID-only QR (for the OMR overlay) — encodes just `paper_id`, no URL.
+    paper_qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={paper_id}"
+    img_map      = await _build_img_map(questions, qr_url, paper_qr_url)
+    qr_src       = img_map.get(qr_url, qr_url)
+    paper_qr_src = img_map.get(paper_qr_url, paper_qr_url)
 
     # Load OMR assets
     try:
@@ -996,7 +981,7 @@ async def get_pdf(
     questions_json = json.dumps(js_questions,  ensure_ascii=False)
     meta_json      = json.dumps(meta,          ensure_ascii=False)
 
-    html         = _build_html(questions_json, meta_json, omr_b64, instr_b64, qr_src, is_legal)
+    html         = _build_html(questions_json, meta_json, omr_b64, instr_b64, qr_src, paper_qr_src, is_legal)
     paper_format = "Legal" if is_legal else "A4"
     pdf_bytes    = await _playwright_to_pdf(html, paper_format)
 
