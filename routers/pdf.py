@@ -226,7 +226,7 @@ body {
   align-items: stretch;
   gap: 10px;
   border: 0px solid #000;
-  padding: 2px;
+  padding: 5px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -293,11 +293,33 @@ body {
 .omr-section {
   flex-shrink: 0;
   border-top: 1px dashed #000;
-  padding-top: 19px;
+  padding-top: 24px;
   overflow: hidden;
+  position: relative;
 }
 
 .omr-section img { display: block; width: 100%; height: auto; }
+
+.omr-overlay-container {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.omr-qr-overlay {
+  z-index: 101;
+  border: 1px solid #000;
+  padding: 2px;
+  background: #fff;
+}
+
+.omr-info-overlay {
+  z-index: 100;
+  background: transparent;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 2px;
+}
 
 table.ht td { padding: 1px 0; }
 
@@ -414,7 +436,20 @@ table.ht td { padding: 1px 0; }
         <div class="column" id="page1Col3"></div>
       </div>
       <div class="omr-section">
-        <img id="omrImg" src="data:image/png;base64,__OMR_B64__" alt="OMR"/>
+        <img id="omrImg" src="data:image/png;base64,__OMR_B64__" alt="OMR" style="position:relative;z-index:1;"/>
+        <div class="omr-overlay-container omr-qr-overlay" style="right:13%;top:16%;width:36px;height:36px;transform:rotate(90deg);">
+          <img src="__QR_SRC__" alt="QR" style="width:100%;height:100%;display:block;object-fit:contain;"/>
+        </div>
+        <div class="omr-overlay-container omr-info-overlay" style="right:10px;bottom:-19px;transform:rotate(90deg);transform-origin:top right;overflow:hidden;text-align:center;">
+          <div id="omrInst" style="font-size:9px;font-weight:bold;margin-bottom:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;"></div>
+          <div style="font-size:5px;">
+            <b id="omrExam"></b>
+            <span style="color:#bbb;margin:0 3px;">|</span>
+            <b id="omrClass"></b>
+            <span style="color:#bbb;margin:0 3px;">|</span>
+            <b id="omrSubj"></b>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -493,6 +528,14 @@ function applyMeta() {
   if (dt) dt.textContent = meta.examDate || '';
   var sc = document.getElementById('sc1');
   if (sc) sc.textContent = meta.subjectCode;
+  var oi = document.getElementById('omrInst');
+  if (oi) oi.textContent = meta.institutionName;
+  var oe = document.getElementById('omrExam');
+  if (oe) oe.textContent = meta.examName;
+  var os = document.getElementById('omrSubj');
+  if (os) os.textContent = meta.subject;
+  var ocl = document.getElementById('omrClass');
+  if (ocl) ocl.textContent = meta.className;
 }
 
 async function waitForMathJax(timeoutMs) {
@@ -533,6 +576,14 @@ async function main() {
   }
 
   await waitImages(document.body);
+
+  // Info overlay CSS width = 80% of OMR image rendered height.
+  // The div is rotated 90°, so its CSS width becomes the visual vertical span.
+  var omrImgEl = document.getElementById('omrImg');
+  var infoEl   = document.querySelector('.omr-info-overlay');
+  if (infoEl && omrImgEl && omrImgEl.offsetHeight > 0) {
+    infoEl.style.width = (omrImgEl.offsetHeight * 0.8) + 'px';
+  }
 
   var omrImg   = document.getElementById('omrImg');
   var instrImg = document.getElementById('instrImg');
