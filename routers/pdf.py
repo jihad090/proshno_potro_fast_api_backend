@@ -167,6 +167,7 @@ window.MathJax = {
 };
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-svg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -295,31 +296,9 @@ body {
   border-top: 1px dashed #000;
   padding-top: 24px;
   overflow: hidden;
-  position: relative;
 }
 
 .omr-section img { display: block; width: 100%; height: auto; }
-
-.omr-overlay-container {
-  position: absolute;
-  z-index: 100;
-  pointer-events: none;
-}
-
-.omr-qr-overlay {
-  z-index: 101;
-  border: 1px solid #000;
-  padding: 2px;
-  background: #fff;
-}
-
-.omr-info-overlay {
-  z-index: 100;
-  background: transparent;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 2px;
-}
 
 table.ht td { padding: 1px 0; }
 
@@ -436,18 +415,77 @@ table.ht td { padding: 1px 0; }
         <div class="column" id="page1Col3"></div>
       </div>
       <div class="omr-section">
-        <img id="omrImg" src="data:image/png;base64,__OMR_B64__" alt="OMR" style="position:relative;z-index:1;"/>
-        <div class="omr-overlay-container omr-qr-overlay" style="right:13%;top:16%;width:36px;height:36px;transform:rotate(90deg);">
-          <img src="__QR_SRC__" alt="QR" style="width:100%;height:100%;display:block;object-fit:contain;"/>
-        </div>
-        <div class="omr-overlay-container omr-info-overlay" style="right:10px;bottom:-19px;transform:rotate(90deg);transform-origin:top right;overflow:hidden;text-align:center;">
-          <div id="omrInst" style="font-size:9px;font-weight:bold;margin-bottom:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;"></div>
-          <div style="font-size:5px;">
-            <b id="omrExam"></b>
-            <span style="color:#bbb;margin:0 3px;">|</span>
-            <b id="omrClass"></b>
-            <span style="color:#bbb;margin:0 3px;">|</span>
-            <b id="omrSubj"></b>
+        <div style="position: relative; display: block;">
+          <img id="omrImg" src="data:image/png;base64,__OMR_B64__" alt="OMR" style="display: block; width: 100%; height: auto;"/>
+
+          <!-- Institution name strip: rotated 90° CW, pivots at top-right.
+               Visible bottom-right ends up 30px from OMR image edges. -->
+          <div id="insName" style="
+            position: absolute;
+            right: 30px;
+            bottom: -32px;
+            width: 360px;
+            height: 60px;
+            background: #ffffff;
+            z-index: 10;
+            box-sizing: border-box;
+            padding: 4px 8px;
+            font-family: 'Noto Serif Bengali', 'Tinos', serif;
+            font-size: 15px;
+            font-weight: bold;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            transform: rotate(90deg);
+            transform-origin: top right;
+          "></div>
+
+          <!-- 6-cell metadata grid (2 rows × 3 cols), also rotated 90° CW. -->
+          <div id="examMetadata" style="
+            position: absolute;
+            right: 95px;
+            bottom: -15px;
+            width: 350px;
+            height: 40px;
+            background: #ffffff;
+            z-index: 10;
+            padding: 4px 6px 6px 10px;
+            font-size: 10px;
+            color: #000;
+            display: grid;
+            grid-template-columns: 2fr 3fr 3fr;
+            grid-template-rows: 1fr 1fr;
+            column-gap: 6px;
+            line-height: 1.2;
+            row-gap: 0px;
+            overflow: hidden;
+            transform: rotate(90deg);
+            transform-origin: top right;
+          "></div>
+
+          <!-- Paper-ID QR code (encodes ONLY meta.paperID), rotated 90° CW. -->
+          <div id="paperQR" style="
+            position: absolute;
+            top: 115px;
+            right: 100px;
+            width: 87px;
+            height: 87px;
+            z-index: 12;
+            background: #ffffff;
+            border: 1.5px solid #000;
+            padding: 4px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(90deg);
+            transform-origin: top right;
+          ">
+            <img id="paperQRImg" alt="Paper ID QR" style="display: block; width: 100%; height: 100%; object-fit: contain;"/>
           </div>
         </div>
       </div>
@@ -515,7 +553,7 @@ function scaleToFit() {
   }
 }
 
-function applyMeta() {
+async function applyMeta() {
   document.getElementById('iname').textContent = meta.institutionName;
   [['en1','en2',meta.examName],['sb1','sb2',meta.subject],['cl1','cl2',meta.className],
    ['tm1','tm2',meta.totalMark],['tt1','tt2',meta.totalTime]].forEach(function(p) {
@@ -528,14 +566,44 @@ function applyMeta() {
   if (dt) dt.textContent = meta.examDate || '';
   var sc = document.getElementById('sc1');
   if (sc) sc.textContent = meta.subjectCode;
-  var oi = document.getElementById('omrInst');
-  if (oi) oi.textContent = meta.institutionName;
-  var oe = document.getElementById('omrExam');
-  if (oe) oe.textContent = meta.examName;
-  var os = document.getElementById('omrSubj');
-  if (os) os.textContent = meta.subject;
-  var ocl = document.getElementById('omrClass');
-  if (ocl) ocl.textContent = meta.className;
+
+  // OMR overlay: institution name strip
+  var insBox = document.getElementById('insName');
+  if (insBox) insBox.textContent = meta.institutionName;
+
+  // OMR overlay: 6-cell metadata grid (2 rows × 3 cols).
+  // DOM order = row 1 L→R, then row 2 L→R.
+  var examBox = document.getElementById('examMetadata');
+  if (examBox) {
+    var cell = function(label, value) {
+      return '<div style="overflow:hidden;white-space:nowrap;">'
+        + '<b>' + label + '</b> ' + (value || '')
+        + '</div>';
+    };
+    examBox.innerHTML =
+        cell('',           '')
+      + cell('শ্রেণীঃ',    meta.className)
+      + cell('পরীক্ষাঃ',   meta.examName)
+      + cell('',           '')
+      + cell('বিষয়ঃ',     meta.subject)
+      + cell('সময়ঃ',      meta.totalTime);
+  }
+
+  // OMR overlay: paper-ID QR code (encodes meta.paperID only).
+  if (window.QRCode && meta.paperID) {
+    try {
+      var qrDataURL = await window.QRCode.toDataURL(String(meta.paperID), {
+        width:                240,
+        margin:               1,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#000000', light: '#ffffff' }
+      });
+      var qrImg = document.getElementById('paperQRImg');
+      if (qrImg) qrImg.src = qrDataURL;
+    } catch (e) {
+      console.warn('paper QR generation failed', e);
+    }
+  }
 }
 
 async function waitForMathJax(timeoutMs) {
@@ -552,7 +620,7 @@ async function waitForMathJax(timeoutMs) {
 }
 
 async function main() {
-  applyMeta();
+  await applyMeta();
   setStatus('প্রশ্ন তৈরি হচ্ছে...');
 
   await new Promise(function(r) { setTimeout(r, 100); });
@@ -576,14 +644,6 @@ async function main() {
   }
 
   await waitImages(document.body);
-
-  // Info overlay CSS width = 80% of OMR image rendered height.
-  // The div is rotated 90°, so its CSS width becomes the visual vertical span.
-  var omrImgEl = document.getElementById('omrImg');
-  var infoEl   = document.querySelector('.omr-info-overlay');
-  if (infoEl && omrImgEl && omrImgEl.offsetHeight > 0) {
-    infoEl.style.width = (omrImgEl.offsetHeight * 0.8) + 'px';
-  }
 
   var omrImg   = document.getElementById('omrImg');
   var instrImg = document.getElementById('instrImg');
@@ -833,7 +893,10 @@ async function main() {
     }
   }
 
-  applyMeta();
+  await applyMeta();
+  // Ensure the freshly-generated paper QR is loaded before signaling ready,
+  // so Playwright captures it in the PDF.
+  await waitImages(document.body);
   scaleToFit();
 
   clearTimeout(_fallback);
@@ -909,6 +972,7 @@ async def get_pdf(
         "subjectCode":     sub_code,
         "totalMark":       str(total_q),
         "totalTime":       f"{duration} minute",
+        "paperID":         paper_id,
     }
 
     # Fetch questions from DB
