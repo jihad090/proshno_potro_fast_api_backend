@@ -72,6 +72,11 @@ class UpdatePaperRequest(BaseModel):
     class_label:      Optional[str] = None  # display label e.g. "Nine"
     exam_name:        Optional[str] = None  # e.g. "অর্ধবার্ষিক পরীক্ষা"
     exam_date:        Optional[str] = None  # e.g. "27/05/2026"
+    no_of_paper:      Optional[int] = None  # number of physical copies to print
+
+class UpdateMetaRequest(BaseModel):
+    institution_name: Optional[str] = None
+    no_of_paper:      Optional[int] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -140,6 +145,8 @@ async def update_paper(paper_id: str, req: UpdatePaperRequest):
         set_payload["exam_name"] = req.exam_name
     if req.exam_date is not None:
         set_payload["exam_date"] = req.exam_date
+    if req.no_of_paper is not None:
+        set_payload["no_of_paper"] = req.no_of_paper
 
     await db[COLLECTION].update_one(
         {"paper_id": paper_id},
@@ -148,6 +155,25 @@ async def update_paper(paper_id: str, req: UpdatePaperRequest):
     )
 
     return {"message": "Paper updated", "paper_id": paper_id}
+
+
+@router.patch("/{paper_id}/meta")
+async def update_paper_meta(paper_id: str, req: UpdateMetaRequest):
+    """Lightweight metadata-only update — no subject_codes/ans_sequence needed."""
+    db = get_db()
+    set_payload: dict = {}
+    if req.institution_name is not None:
+        set_payload["institution_name"] = req.institution_name
+    if req.no_of_paper is not None:
+        set_payload["no_of_paper"] = req.no_of_paper
+    if not set_payload:
+        return {"message": "Nothing to update"}
+    await db[COLLECTION].update_one(
+        {"paper_id": paper_id},
+        {"$set": set_payload},
+        upsert=False,
+    )
+    return {"message": "Meta updated", "paper_id": paper_id}
 
 
 @router.get("/list")
