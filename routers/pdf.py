@@ -423,7 +423,7 @@ table.ht td { padding: 1px 0; }
             position: absolute;
             right: 30px;
             bottom: -32px;
-            width: 360px;
+            width: 340px;
             height: 60px;
             background: #ffffff;
             z-index: 10;
