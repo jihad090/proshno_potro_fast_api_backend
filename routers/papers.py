@@ -79,6 +79,7 @@ class UpdateMetaRequest(BaseModel):
     institution_name: Optional[str] = None
     no_of_paper:      Optional[int] = None
     pdf_local_path:   Optional[str] = None
+    omr_image_online: Optional[str] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -149,6 +150,8 @@ async def update_paper(paper_id: str, req: UpdatePaperRequest):
         set_payload["exam_date"] = req.exam_date
     if req.no_of_paper is not None:
         set_payload["no_of_paper"] = req.no_of_paper
+    if req.allow_infinity_set is not None:
+        set_payload["allow_infinity_set"] = req.allow_infinity_set
 
     await db[COLLECTION].update_one(
         {"paper_id": paper_id},
@@ -170,6 +173,8 @@ async def update_paper_meta(paper_id: str, req: UpdateMetaRequest):
         set_payload["no_of_paper"] = req.no_of_paper
     if req.pdf_local_path is not None:
         set_payload["pdf_local_path"] = req.pdf_local_path
+    if req.omr_image_online is not None:
+        set_payload["omr_image_online"] = req.omr_image_online
     if not set_payload:
         return {"message": "Nothing to update"}
     await db[COLLECTION].update_one(
