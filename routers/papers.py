@@ -72,7 +72,8 @@ class UpdatePaperRequest(BaseModel):
     class_label:      Optional[str] = None  # display label e.g. "Nine"
     exam_name:        Optional[str] = None  # e.g. "অর্ধবার্ষিক পরীক্ষা"
     exam_date:        Optional[str] = None  # e.g. "27/05/2026"
-    no_of_paper:      Optional[int] = None  # number of physical copies to print
+    no_of_paper:        Optional[int]  = None  # number of physical copies to print
+    allow_infinity_set: Optional[bool] = None  # unlimited re-use by any student
 
 class UpdateMetaRequest(BaseModel):
     institution_name: Optional[str] = None
