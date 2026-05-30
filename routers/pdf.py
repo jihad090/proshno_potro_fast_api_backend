@@ -26,8 +26,8 @@ router = APIRouter()
 
 ASSETS_DIR      = Path(__file__).parent.parent / "assets"
 PAPER_COLL      = "paper_data"
-QR_BASE         = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=www.prosnopotro.com/res/"
-
+# QR_BASE         = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=www.prosnopotro.com/res/"
+QR_BASE         = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=www.proshnopotro.vercel.app/res/"
 
 # ── Playwright ────────────────────────────────────────────────────────────────
 
